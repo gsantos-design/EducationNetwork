@@ -711,7 +711,7 @@ export default function LandingPage() {
                   <li><a href="#" className="hover:text-white">Help Center</a></li>
                   <li><a href="#" className="hover:text-white">Parent Resources</a></li>
                   <li><a href="#" className="hover:text-white">Student Guide</a></li>
-                  <li><a href="mailto:support@edconnect.edu" className="hover:text-white">support@edconnect.edu</a></li>
+                  <li><a href="mailto:director@miraellagroup.com" className="hover:text-white">director@miraellagroup.com</a></li>
                 </ul>
               </div>
             </div>
