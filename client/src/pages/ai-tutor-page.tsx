@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "../lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,7 +20,8 @@ import {
   Clock,
   BarChart3,
   Brain,
-  Mic
+  Mic,
+  TrendingUp
 } from "lucide-react";
 import type { TutoringSession, TutoringMessage } from "@shared/schema";
 import { motion, AnimatePresence } from "framer-motion";
@@ -53,6 +55,7 @@ const ambientSounds = [
 
 export default function AITutorPage() {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [currentMessage, setCurrentMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState<string>("Algebra");
@@ -260,17 +263,27 @@ export default function AITutorPage() {
               Your personal tutor for advanced 9th grade studies
             </p>
           </div>
-          {session && !session.endedAt && (
+          <div className="flex items-center gap-2">
             <Button
               variant="outline"
-              onClick={() => endSessionMutation.mutate()}
-              disabled={endSessionMutation.isPending}
-              data-testid="button-end-session"
+              onClick={() => setLocation("/progress")}
+              className="gap-2"
             >
-              <Clock className="h-4 w-4 mr-2" />
-              End Session
+              <TrendingUp className="h-4 w-4" />
+              My Progress
             </Button>
-          )}
+            {session && !session.endedAt && (
+              <Button
+                variant="outline"
+                onClick={() => endSessionMutation.mutate()}
+                disabled={endSessionMutation.isPending}
+                data-testid="button-end-session"
+              >
+                <Clock className="h-4 w-4 mr-2" />
+                End Session
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Subject Selector */}

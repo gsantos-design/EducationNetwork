@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import AuthPage from "@/pages/auth-page";
 import AITutorPage from "@/pages/ai-tutor-page";
+import ProgressPage from "@/pages/progress-page";
 import { ProtectedRoute } from "./lib/protected-route";
 import { AuthProvider } from "@/hooks/use-auth";
 
@@ -12,6 +13,7 @@ function Router() {
     <Switch>
       <ProtectedRoute path="/" component={AITutorPage} />
       <Route path="/auth" component={AuthPage} />
+      <ProtectedRoute path="/progress" component={ProgressPage} />
       <ProtectedRoute path="*" component={AITutorPage} />
     </Switch>
   );

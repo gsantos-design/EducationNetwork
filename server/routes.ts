@@ -1624,7 +1624,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/tutor/sessions/history", withUserContext, requireRole([UserRole.STUDENT, UserRole.EDUCATOR, UserRole.ADMIN]), async (req, res, next) => {
     try {
       const user = req.userContext as User;
-      
+
       if (user.role === UserRole.STUDENT) {
         const student = await storage.getStudentByUserId(user.id);
         if (!student) return res.status(404).json({ message: "Student record not found" });
@@ -1633,6 +1633,133 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         // Educators and admins can view all sessions (for now - could be filtered)
         res.json([]);
+      }
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Get AI-generated progress insights for student
+  app.get("/api/tutor/progress-insights", withUserContext, requireRole([UserRole.STUDENT]), async (req, res, next) => {
+    try {
+      const user = req.userContext as User;
+      const student = await storage.getStudentByUserId(user.id);
+      if (!student) return res.status(404).json({ message: "Student record not found" });
+
+      // Get all tutoring sessions
+      const sessions = await storage.getTutoringSessionsByStudentId(student.id);
+
+      if (sessions.length === 0) {
+        return res.json({
+          overallProgress: "Just getting started! Begin your learning journey by choosing a subject.",
+          strengths: [],
+          areasForImprovement: [],
+          recommendations: ["Start by exploring subjects you're curious about", "Don't hesitate to ask questions - that's how you learn!", "Take your time and enjoy the process"],
+          weeklyGoal: "Complete your first tutoring session",
+          totalSessions: 0,
+          totalTime: 0,
+          subjectBreakdown: {}
+        });
+      }
+
+      // Calculate statistics
+      const totalSessions = sessions.length;
+      const totalTime = sessions.reduce((acc, session) => {
+        if (session.startedAt && session.endedAt) {
+          const start = new Date(session.startedAt).getTime();
+          const end = new Date(session.endedAt).getTime();
+          return acc + (end - start) / 1000 / 60; // minutes
+        }
+        return acc;
+      }, 0);
+
+      // Group by subject
+      const subjectBreakdown: Record<string, { sessions: number; time: number; avgPerformance: number }> = {};
+      sessions.forEach(session => {
+        if (session.subject) {
+          if (!subjectBreakdown[session.subject]) {
+            subjectBreakdown[session.subject] = { sessions: 0, time: 0, avgPerformance: 0 };
+          }
+          subjectBreakdown[session.subject].sessions++;
+          if (session.startedAt && session.endedAt) {
+            const start = new Date(session.startedAt).getTime();
+            const end = new Date(session.endedAt).getTime();
+            subjectBreakdown[session.subject].time += (end - start) / 1000 / 60;
+          }
+          if (session.performanceScore) {
+            subjectBreakdown[session.subject].avgPerformance += session.performanceScore;
+          }
+        }
+      });
+
+      // Calculate average performance per subject
+      Object.keys(subjectBreakdown).forEach(subject => {
+        subjectBreakdown[subject].avgPerformance =
+          subjectBreakdown[subject].avgPerformance / subjectBreakdown[subject].sessions;
+      });
+
+      // Generate AI insights based on session data
+      const recentSessions = sessions.slice(-10); // Last 10 sessions
+      const conceptsCovered = recentSessions.flatMap(s => s.conceptsCovered || []);
+      const strengthAreas = recentSessions.flatMap(s => s.strengthAreas || []);
+      const improvementAreas = recentSessions.flatMap(s => s.improvementAreas || []);
+
+      // Use AI to generate personalized insights
+      const insightsPrompt = `As an encouraging AI tutor for a 9th grade student, analyze their learning progress and provide warm, motivational insights.
+
+Student Stats:
+- Total Sessions: ${totalSessions}
+- Total Study Time: ${Math.round(totalTime)} minutes
+- Subjects Studied: ${Object.keys(subjectBreakdown).join(", ")}
+- Recent Concepts Covered: ${conceptsCovered.slice(0, 10).join(", ")}
+- Identified Strengths: ${strengthAreas.slice(0, 5).join(", ")}
+- Areas for Growth: ${improvementAreas.slice(0, 5).join(", ")}
+
+Provide a JSON response with:
+{
+  "overallProgress": "A warm, encouraging 2-3 sentence summary of their overall progress",
+  "strengths": ["3-5 specific strengths you've noticed"],
+  "areasForImprovement": ["2-3 areas where gentle growth is happening"],
+  "recommendations": ["3-4 specific, actionable suggestions for this week"],
+  "weeklyGoal": "One achievable, motivating goal for this week"
+}
+
+Important: Be warm, encouraging, and celebrate effort. Use language that makes the student feel proud and motivated.`;
+
+      try {
+        const aiResponse = await getTutorResponse([
+          { role: "user", content: insightsPrompt }
+        ], "general");
+
+        // Parse AI response
+        const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const insights = JSON.parse(jsonMatch[0]);
+          res.json({
+            ...insights,
+            totalSessions,
+            totalTime: Math.round(totalTime),
+            subjectBreakdown
+          });
+        } else {
+          throw new Error("Could not parse AI response");
+        }
+      } catch (error) {
+        // Fallback if AI fails
+        res.json({
+          overallProgress: `You've completed ${totalSessions} tutoring sessions and spent ${Math.round(totalTime)} minutes learning! That's fantastic dedication. Keep up the great work!`,
+          strengths: strengthAreas.slice(0, 3).filter((v, i, a) => a.indexOf(v) === i),
+          areasForImprovement: improvementAreas.slice(0, 3).filter((v, i, a) => a.indexOf(v) === i),
+          recommendations: [
+            "Continue practicing the concepts you've been working on",
+            "Try exploring a new subject area this week",
+            "Don't hesitate to ask questions when something isn't clear"
+          ],
+          weeklyGoal: "Complete 3 more tutoring sessions this week",
+          totalSessions,
+          totalTime: Math.round(totalTime),
+          subjectBreakdown
+        });
       }
     } catch (error) {
       next(error);
