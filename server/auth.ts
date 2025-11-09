@@ -33,13 +33,13 @@ export function setupAuth(app: Express) {
   
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET || "edconnect-secret-key",
-    resave: false,
+    resave: true, // Save session on every request to prevent session loss
     saveUninitialized: false,
     store: storage.sessionStore,
     cookie: {
       secure: process.env.NODE_ENV === "production", // Secure cookies for production HTTPS
       httpOnly: true,
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Allow cross-site for production
+      sameSite: "lax", // Same-site requests only
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     }
   };
