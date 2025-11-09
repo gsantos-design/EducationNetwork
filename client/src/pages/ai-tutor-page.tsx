@@ -21,7 +21,9 @@ import {
   BarChart3,
   Brain,
   Mic,
-  TrendingUp
+  TrendingUp,
+  Shield,
+  Lock
 } from "lucide-react";
 import type { TutoringSession, TutoringMessage } from "@shared/schema";
 import { motion, AnimatePresence } from "framer-motion";
@@ -285,6 +287,36 @@ export default function AITutorPage() {
             )}
           </div>
         </div>
+
+        {/* Privacy Notice Banner */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <Card className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-green-200 dark:border-green-800">
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 p-2 bg-green-600 rounded-lg">
+                  <Shield className="h-5 w-5 text-white" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="font-semibold text-green-900 dark:text-green-100">
+                      Your Private Learning Space
+                    </h3>
+                    <Lock className="h-4 w-4 text-green-600" />
+                  </div>
+                  <p className="text-sm text-green-800 dark:text-green-200 leading-relaxed">
+                    <strong>This is YOUR safe space to learn.</strong> All your tutoring conversations stay completely private -
+                    they're never shared with teachers, parents, or classmates. Ask any question, make mistakes, and explore freely.
+                    That's how you learn best! 🌟
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
 
         {/* Subject Selector */}
         <Card>
