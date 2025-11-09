@@ -103,10 +103,10 @@ export function setupAuth(app: Express) {
       const studentUser = await storage.createUser({
         username: "student",
         password: await hashPassword("EdConnect2025!"),
-        firstName: "Alex",
-        lastName: "Chen",
+        firstName: "Student",
+        lastName: "",
         role: UserRole.STUDENT,
-        email: "alex.chen@edconnect.edu"
+        email: "student@edconnect.edu"
       });
       
       // Create student record
