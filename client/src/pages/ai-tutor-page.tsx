@@ -268,11 +268,19 @@ export default function AITutorPage() {
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
+              onClick={() => setLocation("/homework")}
+              className="gap-2"
+            >
+              <BookOpen className="h-4 w-4" />
+              Homework
+            </Button>
+            <Button
+              variant="outline"
               onClick={() => setLocation("/progress")}
               className="gap-2"
             >
               <TrendingUp className="h-4 w-4" />
-              My Progress
+              Progress
             </Button>
             {session && !session.endedAt && (
               <Button
