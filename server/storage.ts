@@ -1,9 +1,9 @@
-import { 
-  users, 
-  type User, 
-  type InsertUser, 
-  students, 
-  type Student, 
+import {
+  users,
+  type User,
+  type InsertUser,
+  students,
+  type Student,
   type InsertStudent,
   educators,
   type Educator,
@@ -11,16 +11,16 @@ import {
   achievements,
   type Achievement,
   type InsertAchievement,
-  classes, 
-  type Class, 
+  classes,
+  type Class,
   type InsertClass,
-  enrollments, 
-  type Enrollment, 
+  enrollments,
+  type Enrollment,
   type InsertEnrollment,
-  grades, 
-  type Grade, 
+  grades,
+  type Grade,
   type InsertGrade,
-  attendance, 
+  attendance,
   type Attendance,
   type InsertAttendance,
   districts,
@@ -38,6 +38,9 @@ import {
   tutoringMessages,
   type TutoringMessage,
   type InsertTutoringMessage,
+  homework,
+  type Homework,
+  type InsertHomework,
   UserRole,
   AdminLevel
 } from "@shared/schema";
@@ -147,7 +150,14 @@ export interface IStorage {
   getTutoringMessage(id: number): Promise<TutoringMessage | undefined>;
   getTutoringMessagesBySessionId(sessionId: number): Promise<TutoringMessage[]>;
   createTutoringMessage(message: InsertTutoringMessage): Promise<TutoringMessage>;
-  
+
+  // Homework management
+  getHomework(id: number): Promise<Homework | undefined>;
+  getHomeworkByStudentId(studentId: number): Promise<Homework[]>;
+  createHomework(homework: InsertHomework): Promise<Homework>;
+  updateHomework(id: number, homeworkData: Partial<Homework>): Promise<Homework | undefined>;
+  deleteHomework(id: number): Promise<boolean>;
+
   // Role-based data access
   getAccessibleSchools(user: User): Promise<School[]>;
   getAccessibleDepartments(user: User): Promise<Department[]>;
@@ -176,6 +186,7 @@ export class MemStorage implements IStorage {
   private achievementsMap: Map<number, Achievement>;
   private tutoringSessionsMap: Map<number, TutoringSession>;
   private tutoringMessagesMap: Map<number, TutoringMessage>;
+  private homeworkMap: Map<number, Homework>;
 
   sessionStore: SessionStore;
 
@@ -192,6 +203,7 @@ export class MemStorage implements IStorage {
   private achievementIdCounter: number;
   private tutoringSessionIdCounter: number;
   private tutoringMessageIdCounter: number;
+  private homeworkIdCounter: number;
 
   constructor() {
     this.districtsMap = new Map();
@@ -207,6 +219,7 @@ export class MemStorage implements IStorage {
     this.achievementsMap = new Map();
     this.tutoringSessionsMap = new Map();
     this.tutoringMessagesMap = new Map();
+    this.homeworkMap = new Map();
 
     this.districtIdCounter = 1;
     this.schoolIdCounter = 1;
@@ -221,6 +234,7 @@ export class MemStorage implements IStorage {
     this.achievementIdCounter = 1;
     this.tutoringSessionIdCounter = 1;
     this.tutoringMessageIdCounter = 1;
+    this.homeworkIdCounter = 1;
     
     // Use in-memory session storage for local demo (use PostgreSQL for production)
     if (process.env.DATABASE_URL && process.env.DATABASE_URL !== 'postgresql://user:password@localhost:5432/edconnect') {
@@ -1072,6 +1086,53 @@ export class MemStorage implements IStorage {
     };
     this.tutoringMessagesMap.set(id, message);
     return message;
+  }
+
+  // Homework management methods
+  async getHomework(id: number): Promise<Homework | undefined> {
+    return this.homeworkMap.get(id);
+  }
+
+  async getHomeworkByStudentId(studentId: number): Promise<Homework[]> {
+    return Array.from(this.homeworkMap.values())
+      .filter(hw => hw.studentId === studentId)
+      .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+  }
+
+  async createHomework(homeworkData: InsertHomework): Promise<Homework> {
+    const id = this.homeworkIdCounter++;
+    const homework: Homework = {
+      id,
+      studentId: homeworkData.studentId,
+      title: homeworkData.title,
+      description: homeworkData.description || null,
+      subject: homeworkData.subject || null,
+      dueDate: homeworkData.dueDate,
+      completed: homeworkData.completed || false,
+      completedAt: homeworkData.completedAt || null,
+      priority: homeworkData.priority || "medium",
+      createdAt: homeworkData.createdAt || new Date().toISOString(),
+      notes: homeworkData.notes || null,
+    };
+    this.homeworkMap.set(id, homework);
+    return homework;
+  }
+
+  async updateHomework(id: number, homeworkData: Partial<Homework>): Promise<Homework | undefined> {
+    const homework = this.homeworkMap.get(id);
+    if (!homework) return undefined;
+
+    const updated: Homework = {
+      ...homework,
+      ...homeworkData,
+      id, // Ensure ID cannot be changed
+    };
+    this.homeworkMap.set(id, updated);
+    return updated;
+  }
+
+  async deleteHomework(id: number): Promise<boolean> {
+    return this.homeworkMap.delete(id);
   }
 
   // Helper method to seed initial data for development

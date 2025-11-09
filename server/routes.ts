@@ -1766,6 +1766,80 @@ Important: Be warm, encouraging, and celebrate effort. Use language that makes t
     }
   });
 
+  // Homework API endpoints
+  app.get("/api/homework", withUserContext, requireRole([UserRole.STUDENT]), async (req, res, next) => {
+    try {
+      const user = req.userContext as User;
+      const student = await storage.getStudentByUserId(user.id);
+      if (!student) return res.status(404).json({ message: "Student record not found" });
+
+      const homework = await storage.getHomeworkByStudentId(student.id);
+      res.json(homework);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/homework", withUserContext, requireRole([UserRole.STUDENT]), async (req, res, next) => {
+    try {
+      const user = req.userContext as User;
+      const student = await storage.getStudentByUserId(user.id);
+      if (!student) return res.status(404).json({ message: "Student record not found" });
+
+      const homework = await storage.createHomework({
+        ...req.body,
+        studentId: student.id,
+      });
+      res.status(201).json(homework);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.patch("/api/homework/:id", withUserContext, requireRole([UserRole.STUDENT]), async (req, res, next) => {
+    try {
+      const user = req.userContext as User;
+      const student = await storage.getStudentByUserId(user.id);
+      if (!student) return res.status(404).json({ message: "Student record not found" });
+
+      const homeworkId = parseInt(req.params.id);
+      const existing = await storage.getHomework(homeworkId);
+
+      if (!existing || existing.studentId !== student.id) {
+        return res.status(404).json({ message: "Homework not found" });
+      }
+
+      const updated = await storage.updateHomework(homeworkId, req.body);
+      res.json(updated);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.delete("/api/homework/:id", withUserContext, requireRole([UserRole.STUDENT]), async (req, res, next) => {
+    try {
+      const user = req.userContext as User;
+      const student = await storage.getStudentByUserId(user.id);
+      if (!student) return res.status(404).json({ message: "Student record not found" });
+
+      const homeworkId = parseInt(req.params.id);
+      const existing = await storage.getHomework(homeworkId);
+
+      if (!existing || existing.studentId !== student.id) {
+        return res.status(404).json({ message: "Homework not found" });
+      }
+
+      const deleted = await storage.deleteHomework(homeworkId);
+      if (deleted) {
+        res.sendStatus(204);
+      } else {
+        res.status(404).json({ message: "Homework not found" });
+      }
+    } catch (error) {
+      next(error);
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

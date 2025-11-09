@@ -192,6 +192,21 @@ export const tutoringMessages = pgTable("tutoring_messages", {
   conceptsDiscussed: text("concepts_discussed").array(), // Concepts in this specific message
 });
 
+// Homework assignments table - helps students track their assignments
+export const homework = pgTable("homework", {
+  id: serial("id").primaryKey(),
+  studentId: integer("student_id").notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  subject: text("subject"), // Mathematics, Science, English, History, etc.
+  dueDate: text("due_date").notNull(),
+  completed: boolean("completed").default(false),
+  completedAt: text("completed_at"),
+  priority: text("priority").default("medium"), // low, medium, high
+  createdAt: text("created_at").notNull(),
+  notes: text("notes"), // Student's personal notes
+});
+
 // Schema for user insertion with default date
 export const insertUserSchema = createInsertSchema(users)
   .pick({
@@ -263,6 +278,13 @@ export const insertTutoringMessageSchema = createInsertSchema(tutoringMessages)
     timestamp: data.timestamp || new Date().toISOString(),
   }));
 
+// Schema for homework insertion
+export const insertHomeworkSchema = createInsertSchema(homework)
+  .transform((data) => ({
+    ...data,
+    createdAt: data.createdAt || new Date().toISOString(),
+  }));
+
 // Common export types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type InsertDistrict = z.infer<typeof insertDistrictSchema>;
@@ -277,6 +299,7 @@ export type InsertAttendance = z.infer<typeof insertAttendanceSchema>;
 export type InsertAchievement = z.infer<typeof insertAchievementSchema>;
 export type InsertTutoringSession = z.infer<typeof insertTutoringSessionSchema>;
 export type InsertTutoringMessage = z.infer<typeof insertTutoringMessageSchema>;
+export type InsertHomework = z.infer<typeof insertHomeworkSchema>;
 
 export type User = typeof users.$inferSelect;
 export type District = typeof districts.$inferSelect;
@@ -291,3 +314,4 @@ export type Attendance = typeof attendance.$inferSelect;
 export type Achievement = typeof achievements.$inferSelect;
 export type TutoringSession = typeof tutoringSessions.$inferSelect;
 export type TutoringMessage = typeof tutoringMessages.$inferSelect;
+export type Homework = typeof homework.$inferSelect;
