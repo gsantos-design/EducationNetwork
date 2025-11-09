@@ -126,51 +126,53 @@ export default function HomeworkPage() {
                   Add Homework
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="bg-white dark:bg-gray-900">
                 <DialogHeader>
                   <DialogTitle>Add New Homework</DialogTitle>
                   <DialogDescription>
                     Track your assignments and never miss a deadline
                   </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium">Title *</label>
+                <form onSubmit={handleSubmit} className="space-y-5">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium block">Title *</label>
                     <Input
                       value={newHomework.title}
                       onChange={(e) => setNewHomework({ ...newHomework, title: e.target.value })}
                       placeholder="Math Chapter 5 Problems"
+                      className="bg-white dark:bg-gray-800"
                     />
                   </div>
-                  <div>
-                    <label className="text-sm font-medium">Description</label>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium block">Description</label>
                     <Textarea
                       value={newHomework.description}
                       onChange={(e) => setNewHomework({ ...newHomework, description: e.target.value })}
                       placeholder="Problems 1-20 on pages 145-147"
+                      className="bg-white dark:bg-gray-800"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium">Subject</label>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium block">Subject</label>
                       <Select value={newHomework.subject} onValueChange={(value) => setNewHomework({ ...newHomework, subject: value })}>
-                        <SelectTrigger>
+                        <SelectTrigger className="bg-white dark:bg-gray-800">
                           <SelectValue placeholder="Select subject" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="bg-white dark:bg-gray-800">
                           {subjects.map(subject => (
                             <SelectItem key={subject} value={subject}>{subject}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
-                    <div>
-                      <label className="text-sm font-medium">Priority</label>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium block">Priority</label>
                       <Select value={newHomework.priority} onValueChange={(value: any) => setNewHomework({ ...newHomework, priority: value })}>
-                        <SelectTrigger>
+                        <SelectTrigger className="bg-white dark:bg-gray-800">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="bg-white dark:bg-gray-800">
                           <SelectItem value="low">Low</SelectItem>
                           <SelectItem value="medium">Medium</SelectItem>
                           <SelectItem value="high">High</SelectItem>
@@ -178,12 +180,13 @@ export default function HomeworkPage() {
                       </Select>
                     </div>
                   </div>
-                  <div>
-                    <label className="text-sm font-medium">Due Date *</label>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium block">Due Date *</label>
                     <Input
                       type="date"
                       value={newHomework.dueDate}
                       onChange={(e) => setNewHomework({ ...newHomework, dueDate: e.target.value })}
+                      className="bg-white dark:bg-gray-800"
                     />
                   </div>
                   <Button type="submit" className="w-full" disabled={createMutation.isPending}>

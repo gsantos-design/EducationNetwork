@@ -6,12 +6,14 @@ import AuthPage from "@/pages/auth-page";
 import AITutorPage from "@/pages/ai-tutor-page";
 import ProgressPage from "@/pages/progress-page";
 import HomeworkPage from "@/pages/homework-page";
+import LandingPage from "@/pages/landing-page";
 import { ProtectedRoute } from "./lib/protected-route";
 import { AuthProvider } from "@/hooks/use-auth";
 
 function Router() {
   return (
     <Switch>
+      <Route path="/landing" component={LandingPage} />
       <ProtectedRoute path="/" component={AITutorPage} />
       <Route path="/auth" component={AuthPage} />
       <ProtectedRoute path="/progress" component={ProgressPage} />
