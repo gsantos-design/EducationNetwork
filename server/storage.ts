@@ -1083,6 +1083,7 @@ export class MemStorage implements IStorage {
       content: messageData.content,
       timestamp: messageData.timestamp || new Date().toISOString(),
       conceptsDiscussed: messageData.conceptsDiscussed || null,
+      imageUrl: messageData.imageUrl || null,
     };
     this.tutoringMessagesMap.set(id, message);
     return message;

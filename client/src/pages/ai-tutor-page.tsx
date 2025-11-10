@@ -23,7 +23,9 @@ import {
   Mic,
   TrendingUp,
   Shield,
-  Lock
+  Lock,
+  Image as ImageIcon,
+  X
 } from "lucide-react";
 import type { TutoringSession, TutoringMessage } from "@shared/schema";
 import { motion, AnimatePresence } from "framer-motion";
@@ -64,6 +66,9 @@ export default function AITutorPage() {
   const [isRecording, setIsRecording] = useState(false);
   const [ambientSound, setAmbientSound] = useState<string | null>(null);
   const [soundVolume, setSoundVolume] = useState(0.3);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
@@ -80,10 +85,11 @@ export default function AITutorPage() {
 
   // Send message mutation
   const sendMessageMutation = useMutation({
-    mutationFn: async (message: string) => {
+    mutationFn: async ({ message, imageUrl }: { message: string; imageUrl?: string }) => {
       return await apiRequest("POST", "/api/tutor/message", {
         message,
-        sessionId: sessionData?.session.id
+        sessionId: sessionData?.session.id,
+        imageUrl
       });
     },
     onMutate: () => {
@@ -92,6 +98,8 @@ export default function AITutorPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/tutor/session?subject=${encodeURIComponent(selectedSubject)}`] });
       setCurrentMessage("");
+      setSelectedImage(null);
+      setImagePreview(null);
       setIsTyping(false);
     },
     onError: (error: Error) => {
@@ -125,9 +133,71 @@ export default function AITutorPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [sessionData?.messages]);
 
-  const handleSendMessage = () => {
-    if (!currentMessage.trim() || isTyping) return;
-    sendMessageMutation.mutate(currentMessage);
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check file size (10MB limit)
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ title: "Error", description: "Image size must be less than 10MB", variant: "destructive" });
+      return;
+    }
+
+    // Check file type
+    if (!file.type.startsWith('image/')) {
+      toast({ title: "Error", description: "Only image files are allowed", variant: "destructive" });
+      return;
+    }
+
+    setSelectedImage(file);
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveImage = () => {
+    setSelectedImage(null);
+    setImagePreview(null);
+  };
+
+  const handleSendMessage = async () => {
+    if ((!currentMessage.trim() && !selectedImage) || isTyping || uploadingImage) return;
+
+    let imageUrl: string | undefined;
+
+    // Upload image if present
+    if (selectedImage) {
+      setUploadingImage(true);
+      try {
+        const formData = new FormData();
+        formData.append('file', selectedImage);
+
+        const response = await fetch('/api/upload/homework', {
+          method: 'POST',
+          body: formData,
+          credentials: 'include',
+        });
+
+        if (!response.ok) {
+          throw new Error('Upload failed');
+        }
+
+        const data = await response.json();
+        imageUrl = data.url;
+      } catch (error) {
+        toast({ title: "Error", description: "Failed to upload image", variant: "destructive" });
+        setUploadingImage(false);
+        return;
+      } finally {
+        setUploadingImage(false);
+      }
+    }
+
+    sendMessageMutation.mutate({ message: currentMessage || "Can you help me with this?", imageUrl });
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -507,6 +577,15 @@ export default function AITutorPage() {
                                 : "bg-white border border-slate-200 text-slate-900"
                             }`}
                           >
+                            {msg.imageUrl && (
+                              <div className="mb-3">
+                                <img
+                                  src={msg.imageUrl}
+                                  alt="Homework"
+                                  className="max-w-full max-h-64 rounded-lg border border-white/20"
+                                />
+                              </div>
+                            )}
                             <div className="text-sm whitespace-pre-wrap">{msg.content}</div>
                             {msg.conceptsDiscussed && msg.conceptsDiscussed.length > 0 && (
                               <div className="mt-3 flex flex-wrap gap-1">
@@ -547,35 +626,81 @@ export default function AITutorPage() {
               </ScrollArea>
 
               {/* Input Area */}
-              <div className="flex gap-2">
-                <Textarea
-                  placeholder={`Ask me anything about ${selectedSubject}...`}
-                  value={currentMessage}
-                  onChange={(e) => setCurrentMessage(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  disabled={isTyping || sessionLoading}
-                  className="min-h-[80px]"
-                  data-testid="input-message"
-                />
-                <div className="flex flex-col gap-2">
-                  <Button
-                    onClick={handleVoiceInput}
-                    disabled={isTyping || sessionLoading}
-                    size="lg"
-                    variant={isRecording ? "destructive" : "outline"}
-                    className={isRecording ? "animate-pulse" : ""}
-                    data-testid="button-voice-input"
-                  >
-                    <Mic className={`h-5 w-5 ${isRecording ? 'animate-pulse' : ''}`} />
-                  </Button>
-                  <Button
-                    onClick={handleSendMessage}
-                    disabled={!currentMessage.trim() || isTyping || sessionLoading}
-                    size="lg"
-                    data-testid="button-send-message"
-                  >
-                    <Send className="h-5 w-5" />
-                  </Button>
+              <div className="space-y-3">
+                {/* Image Preview */}
+                {imagePreview && (
+                  <div className="relative inline-block">
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
+                      className="max-h-32 rounded-lg border-2 border-blue-300"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleRemoveImage}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                      aria-label="Remove image"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <div className="flex-1 space-y-2">
+                    <Textarea
+                      placeholder={imagePreview ? "Ask about the image..." : `Ask me anything about ${selectedSubject}...`}
+                      value={currentMessage}
+                      onChange={(e) => setCurrentMessage(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      disabled={isTyping || sessionLoading || uploadingImage}
+                      className="min-h-[80px]"
+                      data-testid="input-message"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label htmlFor="image-upload">
+                      <Button
+                        type="button"
+                        size="lg"
+                        variant="outline"
+                        disabled={isTyping || sessionLoading || uploadingImage}
+                        className="cursor-pointer"
+                        asChild
+                      >
+                        <span>
+                          <ImageIcon className={`h-5 w-5 ${uploadingImage ? 'animate-pulse' : ''}`} />
+                        </span>
+                      </Button>
+                      <input
+                        id="image-upload"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageSelect}
+                        className="hidden"
+                        disabled={isTyping || sessionLoading || uploadingImage}
+                        aria-label="Upload homework image"
+                      />
+                    </label>
+                    <Button
+                      onClick={handleVoiceInput}
+                      disabled={isTyping || sessionLoading || uploadingImage}
+                      size="lg"
+                      variant={isRecording ? "destructive" : "outline"}
+                      className={isRecording ? "animate-pulse" : ""}
+                      data-testid="button-voice-input"
+                    >
+                      <Mic className={`h-5 w-5 ${isRecording ? 'animate-pulse' : ''}`} />
+                    </Button>
+                    <Button
+                      onClick={handleSendMessage}
+                      disabled={(!currentMessage.trim() && !selectedImage) || isTyping || sessionLoading || uploadingImage}
+                      size="lg"
+                      data-testid="button-send-message"
+                    >
+                      {uploadingImage ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+                    </Button>
+                  </div>
                 </div>
               </div>
               {isRecording && (

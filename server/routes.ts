@@ -1526,7 +1526,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const student = await storage.getStudentByUserId(user.id);
       if (!student) return res.status(404).json({ message: "Student record not found" });
 
-      const { message: userMessage, sessionId } = req.body;
+      const { message: userMessage, sessionId, imageUrl } = req.body;
       if (!userMessage || !sessionId) {
         return res.status(400).json({ message: "Message and sessionId are required" });
       }
@@ -1543,7 +1543,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         role: "user",
         content: userMessage,
         timestamp: new Date().toISOString(),
-        conceptsDiscussed: []
+        conceptsDiscussed: [],
+        imageUrl: imageUrl || undefined
       });
       await storage.createTutoringMessage(userMessageInput);
 
@@ -1551,7 +1552,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allMessages = await storage.getTutoringMessagesBySessionId(session.id);
       const conversationHistory: TutorMessage[] = allMessages.map(msg => ({
         role: msg.role as "user" | "assistant",
-        content: msg.content
+        content: msg.content,
+        imageUrl: msg.imageUrl || undefined
       }));
 
       // FERPA COMPLIANCE: Build student context for PII redaction

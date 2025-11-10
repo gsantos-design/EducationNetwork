@@ -155,6 +155,7 @@ These are brilliant, capable students who just need a bit more time to process i
 export interface TutorMessage {
   role: "system" | "user" | "assistant";
   content: string;
+  imageUrl?: string;
 }
 
 export interface TutorResponse {
@@ -261,6 +262,32 @@ export async function getTutorResponse(
     // FERPA COMPLIANCE: Redact PII from all user messages before sending to Anthropic
     const redactedMessages = messages.map(msg => {
       if (msg.role === "user") {
+        // If message has an image, send it as a multi-part content block
+        if (msg.imageUrl) {
+          // Convert relative URL to base64 if needed, or use URL directly
+          // For now, we'll construct the full URL
+          const fullImageUrl = msg.imageUrl.startsWith('http')
+            ? msg.imageUrl
+            : `${process.env.APP_URL || 'https://educationnetwork.onrender.com'}${msg.imageUrl}`;
+
+          return {
+            role: "user" as const,
+            content: [
+              {
+                type: "image" as const,
+                source: {
+                  type: "url" as const,
+                  url: fullImageUrl
+                }
+              },
+              {
+                type: "text" as const,
+                text: redactPII(msg.content, studentContext)
+              }
+            ]
+          };
+        }
+
         return {
           role: "user" as const,
           content: redactPII(msg.content, studentContext)
@@ -274,7 +301,7 @@ export async function getTutorResponse(
         role: msg.role === "assistant" ? "assistant" as const : "user" as const,
         content: msg.content
       };
-    }).filter((msg): msg is { role: "user" | "assistant"; content: string } => msg !== null);
+    }).filter((msg): msg is any => msg !== null);
 
     // Anthropic API call
     const completion = await anthropic.messages.create({

@@ -190,6 +190,7 @@ export const tutoringMessages = pgTable("tutoring_messages", {
   content: text("content").notNull(),
   timestamp: text("timestamp").notNull(),
   conceptsDiscussed: text("concepts_discussed").array(), // Concepts in this specific message
+  imageUrl: text("image_url"), // URL to uploaded homework image
 });
 
 // Homework assignments table - helps students track their assignments
