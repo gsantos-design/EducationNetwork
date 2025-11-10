@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
-import { BookOpen, Plus, Calendar, CheckCircle2, Circle, Trash2, ArrowLeft, AlertCircle } from "lucide-react";
+import { BookOpen, Plus, Calendar, CheckCircle2, Circle, Trash2, ArrowLeft, AlertCircle, Image, X } from "lucide-react";
 import type { Homework } from "@shared/schema";
 
 const subjects = [
@@ -23,12 +23,16 @@ export default function HomeworkPage() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [isAddingHomework, setIsAddingHomework] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
   const [newHomework, setNewHomework] = useState({
     title: "",
     description: "",
     subject: "",
     dueDate: "",
     priority: "medium" as "low" | "medium" | "high",
+    attachmentUrl: "",
+    attachmentName: "",
   });
 
   const { data: homework = [], isLoading } = useQuery<Homework[]>({
@@ -42,7 +46,8 @@ export default function HomeworkPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/homework"] });
       setIsAddingHomework(false);
-      setNewHomework({ title: "", description: "", subject: "", dueDate: "", priority: "medium" });
+      setNewHomework({ title: "", description: "", subject: "", dueDate: "", priority: "medium", attachmentUrl: "", attachmentName: "" });
+      setSelectedFile(null);
       toast({ title: "Success", description: "Homework added!" });
     },
     onError: (error: Error) => {
@@ -71,6 +76,57 @@ export default function HomeworkPage() {
       toast({ title: "Success", description: "Homework deleted" });
     },
   });
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check file size (10MB limit)
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ title: "Error", description: "File size must be less than 10MB", variant: "destructive" });
+      return;
+    }
+
+    setSelectedFile(file);
+    setUploadingFile(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/upload/homework', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+
+      const data = await response.json();
+      setNewHomework({
+        ...newHomework,
+        attachmentUrl: data.url,
+        attachmentName: data.filename,
+      });
+      toast({ title: "Success", description: "File uploaded!" });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to upload file", variant: "destructive" });
+      setSelectedFile(null);
+    } finally {
+      setUploadingFile(false);
+    }
+  };
+
+  const handleRemoveFile = () => {
+    setSelectedFile(null);
+    setNewHomework({
+      ...newHomework,
+      attachmentUrl: "",
+      attachmentName: "",
+    });
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -189,7 +245,47 @@ export default function HomeworkPage() {
                       className="bg-white dark:bg-gray-800"
                     />
                   </div>
-                  <Button type="submit" className="w-full" disabled={createMutation.isPending}>
+
+                  {/* File Upload */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium block">Attach Picture/Screenshot (Optional)</label>
+                    <div className="flex items-center gap-2">
+                      <label htmlFor="file-upload" className="cursor-pointer">
+                        <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-md hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors border border-blue-200 dark:border-blue-800">
+                          <Image className="h-4 w-4" />
+                          <span className="text-sm font-medium">
+                            {uploadingFile ? "Uploading..." : "Choose File"}
+                          </span>
+                        </div>
+                        <input
+                          id="file-upload"
+                          type="file"
+                          accept="image/*,.pdf"
+                          onChange={handleFileSelect}
+                          className="hidden"
+                          disabled={uploadingFile}
+                        />
+                      </label>
+                      {selectedFile && (
+                        <div className="flex items-center gap-2 px-3 py-2 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-md border border-green-200 dark:border-green-800">
+                          <span className="text-sm">{selectedFile.name}</span>
+                          <button
+                            type="button"
+                            onClick={handleRemoveFile}
+                            className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-200"
+                            aria-label="Remove file"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Upload a picture of your homework (Max 10MB - JPG, PNG, GIF, or PDF)
+                    </p>
+                  </div>
+
+                  <Button type="submit" className="w-full" disabled={createMutation.isPending || uploadingFile}>
                     {createMutation.isPending ? "Adding..." : "Add Homework"}
                   </Button>
                 </form>
@@ -354,6 +450,29 @@ function HomeworkItem({
             </h3>
             {homework.description && (
               <p className="text-sm text-muted-foreground mt-1">{homework.description}</p>
+            )}
+            {homework.attachmentUrl && (
+              <div className="mt-3">
+                <a
+                  href={homework.attachmentUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block"
+                >
+                  {homework.attachmentUrl.match(/\.(jpg|jpeg|png|gif)$/i) ? (
+                    <img
+                      src={homework.attachmentUrl}
+                      alt={homework.attachmentName || 'Homework attachment'}
+                      className="max-w-xs max-h-48 rounded-lg border border-gray-200 hover:border-blue-400 transition-colors cursor-pointer"
+                    />
+                  ) : (
+                    <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-md border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors w-fit">
+                      <Image className="h-4 w-4" />
+                      <span className="text-sm">{homework.attachmentName || 'View attachment'}</span>
+                    </div>
+                  )}
+                </a>
+              </div>
             )}
             <div className="flex flex-wrap items-center gap-2 mt-2">
               {homework.subject && (

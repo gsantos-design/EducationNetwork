@@ -1113,6 +1113,8 @@ export class MemStorage implements IStorage {
       priority: homeworkData.priority || "medium",
       createdAt: homeworkData.createdAt || new Date().toISOString(),
       notes: homeworkData.notes || null,
+      attachmentUrl: homeworkData.attachmentUrl || null,
+      attachmentName: homeworkData.attachmentName || null,
     };
     this.homeworkMap.set(id, homework);
     return homework;

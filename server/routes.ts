@@ -1,10 +1,46 @@
 import type { Express, Request, Response, NextFunction } from "express";
+import express from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { UserRole, AdminLevel, User, InsertAchievement, Achievement, insertAchievementSchema, insertTutoringSessionSchema, insertTutoringMessageSchema } from "@shared/schema";
 import { z } from "zod";
 import { getTutorResponse, generateSessionSummary, type TutorMessage } from "./anthropic";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+
+// Configure multer for file uploads
+const uploadsDir = path.join(process.cwd(), "uploads");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const storage_multer = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadsDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({
+  storage: storage_multer,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif|pdf/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+
+    if (mimetype && extname) {
+      return cb(null, true);
+    } else {
+      cb(new Error('Only images (JPEG, PNG, GIF) and PDFs are allowed!'));
+    }
+  }
+});
 
 // Role-based access control middleware
 function requireRole(roles: UserRole[]) {
@@ -1839,6 +1875,26 @@ Important: Be warm, encouraging, and celebrate effort. Use language that makes t
       next(error);
     }
   });
+
+  // File upload endpoint for homework attachments
+  app.post("/api/upload/homework", withUserContext, requireRole([UserRole.STUDENT]), upload.single('file'), async (req, res, next) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const fileUrl = `/uploads/${req.file.filename}`;
+      res.status(201).json({
+        url: fileUrl,
+        filename: req.file.originalname
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Serve uploaded files
+  app.use('/uploads', express.static(uploadsDir));
 
   const httpServer = createServer(app);
 

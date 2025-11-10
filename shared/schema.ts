@@ -205,6 +205,8 @@ export const homework = pgTable("homework", {
   priority: text("priority").default("medium"), // low, medium, high
   createdAt: text("created_at").notNull(),
   notes: text("notes"), // Student's personal notes
+  attachmentUrl: text("attachment_url"), // URL to uploaded image/screenshot
+  attachmentName: text("attachment_name"), // Original filename
 });
 
 // Schema for user insertion with default date
