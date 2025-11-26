@@ -44,10 +44,12 @@ const subjects = [
   { value: "French", label: "French", icon: "🇫🇷", category: "Languages" },
   { value: "Mandarin", label: "Mandarin", icon: "🇨🇳", category: "Languages" },
   { value: "Latin", label: "Latin", icon: "🏛️", category: "Languages" },
-  { value: "Computer Science", label: "Computer Science", icon: "💻", category: "Other" },
-  { value: "Health", label: "Health", icon: "🏃", category: "Other" },
-  { value: "Art", label: "Art", icon: "🎨", category: "Other" },
-  { value: "Music", label: "Music", icon: "🎵", category: "Other" }
+  { value: "Computer Science", label: "Computer Science", icon: "💻", category: "Electives" },
+  { value: "Health", label: "Health", icon: "🏃", category: "Electives" },
+  { value: "Art", label: "Art", icon: "🎨", category: "Electives" },
+  { value: "Music", label: "Music", icon: "🎵", category: "Electives" },
+  { value: "Build with Claude", label: "Build with Claude", icon: "🤖", category: "Electives" },
+  { value: "Clock Building", label: "Clock Building", icon: "⏰", category: "Electives" }
 ];
 
 const ambientSounds = [
@@ -471,7 +473,9 @@ export default function AITutorPage() {
                               "Computer Science": "Can you explain how loops and conditionals work in programming?",
                               "Health": "What are the main components of a balanced, healthy diet?",
                               "Art": "What are the principles of color theory and how do I use them?",
-                              "Music": "Can you explain the circle of fifths and key signatures?"
+                              "Music": "Can you explain the circle of fifths and key signatures?",
+                              "Build with Claude": "I want to build my first web app! Where should I start?",
+                              "Clock Building": "How do clocks work and what would I need to build one?"
                             };
                             setCurrentMessage(questions[selectedSubject] || "Can you help me understand this topic?");
                           }}
@@ -495,6 +499,8 @@ export default function AITutorPage() {
                               {selectedSubject === "Health" && "Balanced Diet"}
                               {selectedSubject === "Art" && "Color Theory"}
                               {selectedSubject === "Music" && "Circle of Fifths"}
+                              {selectedSubject === "Build with Claude" && "Getting Started"}
+                              {selectedSubject === "Clock Building" && "How Clocks Work"}
                             </div>
                             <div className="text-xs text-muted-foreground">
                               Try this example question
@@ -521,7 +527,9 @@ export default function AITutorPage() {
                               "Computer Science": "How do functions and parameters work in programming?",
                               "Health": "What are the benefits of regular exercise for mental health?",
                               "Art": "How do I create perspective and depth in my drawings?",
-                              "Music": "Can you explain rhythm, time signatures, and how to count beats?"
+                              "Music": "Can you explain rhythm, time signatures, and how to count beats?",
+                              "Build with Claude": "What should I build for my first project? Something fun and useful!",
+                              "Clock Building": "Can you help me design a simple clock I can build at home?"
                             };
                             setCurrentMessage(questions[selectedSubject] || "Can you explain this concept in more detail?");
                           }}
@@ -545,6 +553,8 @@ export default function AITutorPage() {
                               {selectedSubject === "Health" && "Exercise & Mental Health"}
                               {selectedSubject === "Art" && "Perspective Drawing"}
                               {selectedSubject === "Music" && "Rhythm & Time Signatures"}
+                              {selectedSubject === "Build with Claude" && "First Project Ideas"}
+                              {selectedSubject === "Clock Building" && "Design Your Clock"}
                             </div>
                             <div className="text-xs text-muted-foreground">
                               Or try this one
